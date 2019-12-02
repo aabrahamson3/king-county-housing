@@ -1,3 +1,6 @@
+# Things I hate
+.DS_Store
+
 # Data files
 *.csv
 *.db
