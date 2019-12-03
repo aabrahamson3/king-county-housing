@@ -589,7 +589,11 @@ FROM :PARCEL_PATH
 DELIMITER ',' CSV HEADER encoding 'latin1'; 
 COPY 613483
 Finished downloading data and documentation at Mon Dec  2 17:29:38 PST 2019
+<<<<<<< HEAD
+Start downloading data and documentation at Tue Dec  3 10:05:09 PST 2019
+=======
 Start downloading data and documentation at Tue Dec  3 09:37:19 PST 2019
+>>>>>>> 427b999aec04ba3cba938e20e019286e3df00553
 \x auto
 Expanded display is used automatically.
 /*
@@ -609,7 +613,11 @@ CREATE TABLE RPSale(
     ExciseTaxNbr NUMERIC(7),
     Major CHAR(6),
     Minor CHAR(4),
+<<<<<<< HEAD
+    DocumentDate DATE,
+=======
     DocumentDate CHAR(10),
+>>>>>>> 427b999aec04ba3cba938e20e019286e3df00553
     SalePrice NUMERIC(9),
     RecordingNbr CHAR(14),
     Volume CHAR(3),
@@ -785,6 +793,9 @@ COPY Parcel
 FROM :PARCEL_PATH
 DELIMITER ',' CSV HEADER encoding 'latin1'; 
 COPY 613483
+<<<<<<< HEAD
+Finished downloading data and documentation at Tue Dec  3 10:06:07 PST 2019
+=======
 Finished downloading data and documentation at Tue Dec  3 09:38:47 PST 2019
 Start downloading data and documentation at Tue Dec  3 09:59:29 PST 2019
 \x auto
@@ -983,3 +994,4 @@ FROM :PARCEL_PATH
 DELIMITER ',' CSV HEADER encoding 'latin1'; 
 COPY 613483
 Finished downloading data and documentation at Tue Dec  3 10:00:53 PST 2019
+>>>>>>> 427b999aec04ba3cba938e20e019286e3df00553

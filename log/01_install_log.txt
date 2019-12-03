@@ -10,7 +10,10 @@ Start installing necessary packages
 Ensuring PostgreSQL services are running...
 Service `postgresql` already started, use `brew services restart postgresql` to restart.
 Finished installing necessary packages
+<<<<<<< HEAD
+=======
 Start installing necessary packages
 Ensuring PostgreSQL services are running...
 Service `postgresql` already started, use `brew services restart postgresql` to restart.
 Finished installing necessary packages
+>>>>>>> 427b999aec04ba3cba938e20e019286e3df00553
