@@ -14,7 +14,7 @@ CREATE TABLE RPSale(
     ExciseTaxNbr NUMERIC(7),
     Major CHAR(6),
     Minor CHAR(4),
-    DocumentDate DATE,
+    DocumentDate CHAR(10),
     SalePrice NUMERIC(9),
     RecordingNbr CHAR(14),
     Volume CHAR(3),
