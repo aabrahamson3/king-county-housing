@@ -1,6 +1,17 @@
 ## This file contains functions made for developing our linear regression model of 
 ## King County housing prices
 
+# from sqlalchemy import create_engine
+# import pandas as pd
+# import seaborn as sns
+# import matplotlib.pyplot as plt
+# import scipy.stats as stats
+# import statsmodels.api as sm
+# import math
+# from sklearn.feature_selection import RFE 
+# from sklearn.linear_model import LinearRegression
+# import numpy as np
+
 def pullsqldata():
     """This function pulls data from three PostGRES tables and returns them into 
     a Pandas Dataframe in order to continue with our EDA. We are filtering records to
@@ -22,81 +33,13 @@ def clean_data_intial(df):
     """ This function cleans the housing data by removing anomoulous outliers, 
     sale price == 0, and irrelevant columns. It also creates a column, "footprint_ratio"
     based on the size of the house on the lot.
-
     We identified features to eliminate based on domain knowledge and the Stepwise Selection Function
     """
     #We chose a minimum sale vale of 10000 and a maximium sale value of 2 sigma
     df_clean = df[(df['saleprice']>10000) & (df['saleprice'] <  (2*df['saleprice'].std())+df['saleprice'].mean())]
     df_clean = df_clean[df_clean['sqftlot'] <  (2*df_clean['sqftlot'].std())+df_clean['sqftlot'].mean()]
     #These are irrelevant or highly covariant columns
-    columns_to_drop = ['documentdate',
-                       'excisetaxnbr',
-                       'recordingnbr',
-                       'volume',
-                       'page',
-                       'platnbr',
-                       'plattype',
-                       'platlot',
-                       'platblock',
-                       'sellername',
-                       'buyername',
-                        'streetname',
-                        'streettype',
-                        'directionsuffix',
-                        'buildingnumber',
-                        'major',
-                        'minor',
-                        'bldggradevar',
-                        'sqfthalffloor',
-                        'sqft2ndfloor',
-                        'sqftupperfloor',
-                        'sqftunfinfull',
-                        'sqftunfinhalf',
-                        'sqfttotbasement',
-                        'sqftfinbasement',
-                        'brickstone',
-                        'viewutilization',
-                        'propname',
-                        'platname',
-                        'platlot',
-                        'platblock',
-                        'range',
-                        'township',
-                        'section',
-                        'quartersection',
-                        'area',
-                        'subarea',
-                        'specarea',
-                        'specsubarea',
-                        'levycode',
-                        'districtname',
-                        'currentzoning',
-                        'topography',
-                        'currentusedesignation',
-                        'salewarning',
-                        'wetland',
-                        'stream',
-                        'seismichazard',
-                        'landslidehazard',
-                        'address',
-                        'airportnoise',
-                        'contamination',
-                        'dnrlease',
-                        'coalminehazard',
-                        'criticaldrainage',
-                        'erosionhazard',
-                        'landfillbuffer',
-                        'hundredyrfloodplain',
-                        'steepslopehazard',
-                        'speciesofconcern',
-                        'sensitiveareatract',
-                        'daylightbasement',
-                        'fraction',
-                        'directionprefix', 
-                        'proptype',
-                        'unbuildable', 
-                        'bldgnbr', 
-                        'pcntcomplete']
+    columns_to_drop = ['documentdate','excisetaxnbr','recordingnbr','volume','page','platnbr','plattype','platlot','platblock','sellername','buyername','streetname','streettype','directionsuffix','buildingnumber','major','minor','bldggradevar','sqfthalffloor','sqft2ndfloor','sqftupperfloor','sqftunfinfull','sqftunfinhalf','sqfttotbasement','sqftfinbasement','brickstone','viewutilization','propname','platname','platlot','platblock','range','township','section','quartersection','area','subarea','specarea','specsubarea','levycode','districtname','currentzoning','topography','currentusedesignation','salewarning','wetland','stream','seismichazard','landslidehazard','address','airportnoise','contamination','dnrlease','coalminehazard','criticaldrainage','erosionhazard','landfillbuffer','hundredyrfloodplain','steepslopehazard','speciesofconcern','sensitiveareatract','daylightbasement','fraction','directionprefix', 'proptype','unbuildable', 'bldgnbr', 'pcntcomplete']
     df_clean.drop(columns=columns_to_drop, inplace = True)
     #The columns with Y or N need to be 1 or 0 to model
     df_clean['othernuisances'] = [i.strip() for i in df_clean['othernuisances']]
@@ -119,10 +62,9 @@ def clean_data_intial(df):
     df_clean.drop(triplex.index, inplace= True, axis=0)
     df_clean['duplex'] = df_clean['nbrlivingunits'] - 1
     df_clean.drop(columns = 'nbrlivingunits', inplace = True)
-
     return df_clean    
  
- def recursive_feature_selection(n_features,indep_variables_df, dep_var):
+def recursive_feature_selection(n_features,indep_variables_df, dep_var):
     """
     n_features = number of features to select
     indep_variables = pandas dataframe containing the features to select from
@@ -260,3 +202,49 @@ def base_model():
     check_feature_resid_dist(base_features, df_cleaned, Y)
     check_feature_heteros(base_features, df_cleaned, Y)
     return make_housing_model(base_features, df_cleaned, Y)
+
+def zip_code_df(df):
+    """
+    This function produces a tuple with tuple[0] as a df with the one hot encoded zip code features and tuple[1] as 
+    the list of zip code column names. 
+    
+    The df input should be the dataframe that is output by the "clean_data_initial" function (not a dataframe that 
+    the "saleprice" column has been removed from.. this is because we drop rows that do not have a zipcode so we need to 
+    keep the shape of the dependent and independent variable dataframes equal). 
+    
+    """
+    #drop the sales that do not include a zip code. We use '98' here to find king county specific zip codes and 
+    #we select only the first 5 digits of the zip code because some sales' zip codes have an extraneious 4 digits
+    dropped_rows = df[df['zipcode'].str.contains ('98')]
+    dropped_rows['zipcode'] = dropped_rows['zipcode'].map(lambda x: x[0:5])
+
+    #use pd.Categorical and pd.get_dummies methods to one hot encode the zip codes
+    dropped_rows['zipcode'] = pd.Categorical(dropped_rows['zipcode'])
+    df_zip = pd.get_dummies(dropped_rows['zipcode'], prefix = 'zip')
+    
+    #drop one column from the zip code columns to address the inherent multicoliniearity
+    df_zip.drop(columns = 'zip_98000', inplace = True) 
+    
+    #get a list of zipcode column names to include in model
+    list_of_zips = df_zip.columns
+    
+    #join the zip code dataframe to the dataframe with the other predicitive features
+    df_with_zip_cols = dropped_rows.join(df_zip, how = 'inner')
+    
+    
+    return df_with_zip_cols, list_of_zips
+
+def make_zipcode_model(df_clean, list_of_baseline_features):
+    #call zip_code_df function to produce zip code df and list of zipcodes
+    zip_tuple = zip_code_df(df_clean)
+
+    #add on total bath colum using previously used function
+    df = engineer_total_baths(zip_tuple[0])
+    
+    #add on list of other baseline features to the zip code list to put into model
+    list_of_features = list(zip_tuple[1])
+    list_of_features.extend(list_of_baseline_features)
+    
+    #produce the model
+    
+    return make_housing_model(list_of_features, df, df['saleprice'])
