@@ -21,7 +21,9 @@ def pullsqldata():
 def clean_data_intial(df):
     """ This function cleans the housing data by removing anomoulous outliers, 
     sale price == 0, and irrelevant columns. It also creates a column, "footprint_ratio"
-    based on the size of the house on the lot
+    based on the size of the house on the lot.
+
+    We identified features to eliminate based on domain knowledge and the Stepwise Selection Function
     """
     #We chose a minimum sale vale of 10000 and a maximium sale value of 2 sigma
     df_clean = df[(df['saleprice']>10000) & (df['saleprice'] <  (2*df['saleprice'].std())+df['saleprice'].mean())]
@@ -105,6 +107,10 @@ def clean_data_intial(df):
     #unfortunatley may not account for detached garages
     df_clean['footprint_ratio']=(df_clean['sqft1stfloor']+df_clean['sqftgarageattached'])/df_clean['sqftlot']
     df_clean.drop(columns = 'sqft1stfloor', inplace = True)
+    # this removes entries that have a ratio higher than 1, meaning the house is large than the lot itself 
+    # (which is impossible)
+    ratio_drop = df_clean.loc[df_clean['footprint_ratio'] > 1.0]
+    df_clean.drop(ratio_drop.index, inplace=True, axis=0)
     
     #nbrliving units is classified data telling us if it is a duplex. We want to remove triplexes and create a duplex 
     #flag column. Also the number of triplexes represent a very small portion of our overall dataset
@@ -145,7 +151,8 @@ def stepwise_selection(X, y,
         verbose - whether to print the sequence of inclusions and exclusions
     Returns: list of selected features 
     Always set threshold_in < threshold_out to avoid infinite looping.
-    See https://en.wikipedia.org/wiki/Stepwise_regression for the details
+    See https://en.wikipedia.org/wiki/Stepwise_regression for the details. 
+    We sourced this function from an internal Flatiron School document
     """
     included = list(initial_list)
     while True:
@@ -181,8 +188,8 @@ def stepwise_selection(X, y,
 
 def make_housing_model(list_of_features, df, y):
     """
-    Takes in a list of features, a dataframe, and a target (as df['target]). Performs an Ordinary Least Squares (OLS)
-    linear regression 
+    Takes in a list of features, a dataframe, and a target (as df['target]). Returns an Ordinary Least Squares (OLS)
+    linear regression model from the statsmodels python library
     """
     
     features = df[list_of_features]
@@ -193,15 +200,20 @@ def make_housing_model(list_of_features, df, y):
 
 def check_feature_linearity(list_of_features, df, y):
     """
+    Takes in a list of features, a dataframe, and a target (as df['target]). Creates a scatterplot of the
+    feature vs the target value. To visually check for linearity between the feature and target. 
     """
     for column in list_of_features:
         plt.scatter(df[column],y, label=column, alpha = .05)
         plt.legend()
         plt.title(column)
+        plt.ylabel(y.name)
+        plt.xlabel(column)
         plt.show()
 
 def check_feature_resid_dist(list_of_features, df, y):
     '''
+    Takes in a list of features, a dataframe, and a target (as df['target]).
     Visualizes the residiuals of a linear model in order to check the 
     assumptions. Shows both histogram of residual values and qq plot.
     
@@ -224,6 +236,7 @@ def check_feature_resid_dist(list_of_features, df, y):
 
 def check_feature_heteros(list_of_features, df, y):
     """
+    Takes in a list of features, a dataframe, and a target (as df['target]).
     Visualizes the heteroscedasticity of a linear model in order to check the 
     assumptions.
     """
@@ -236,3 +249,14 @@ def check_feature_heteros(list_of_features, df, y):
 
         fig = sm.graphics.plot_regress_exog(model, feature, fig=fig)
         plt.show()
+
+def base_model():
+    """calling this function will utilize many other defined functions to produce our base model report for King County
+    Housing prices - this may take 1-2 minutes to complete.
+    """
+    df_cleaned = clean_data_intial(pullsqldata())
+    base_features = ['sqfttotliving','footprint_ratio','duplex']
+    Y = df_cleaned['saleprice']
+    check_feature_resid_dist(base_features, df_cleaned, Y)
+    check_feature_heteros(base_features, df_cleaned, Y)
+    return make_housing_model(base_features, df_cleaned, Y)
