@@ -401,4 +401,3 @@ def waterfront_ohe(final_model_df):
     df_with_water_cols = df_with_water_cols.drop(['wfntlocation'], axis=1)
     return df_with_water_cols
 
-    
