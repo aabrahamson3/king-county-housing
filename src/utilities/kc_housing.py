@@ -375,7 +375,7 @@ def check_zip_code_res_normality(df):
     return plt.show()
 
 def base_model():
-    """calling this function will utilize all other defined functions to produce our base model report for King County
+    """calling this function will utilize other defined functions to produce our base model report for King County
     Housing prices - PLEASE NOTE THIS USES A SQL QUERY, MAY TAKE UP TO ONE MINUTE TO COMPLETE
     """
     df_cleaned = clean_data_intial(pullsqldata())
@@ -383,6 +383,8 @@ def base_model():
     Y = df_cleaned['saleprice']
     check_feature_resid_dist(base_features, df_cleaned, Y)
     check_feature_heteros(base_features, df_cleaned, Y)
+    check_feature_linearity(base_features, df_cleaned, Y)
+    
     return make_housing_model(base_features, df_cleaned, Y)
 
 def waterfront_ohe(final_model_df):
@@ -398,3 +400,5 @@ def waterfront_ohe(final_model_df):
     df_with_water_cols = final_model_df.join(df_water, how = 'inner')
     df_with_water_cols = df_with_water_cols.drop(['wfntlocation'], axis=1)
     return df_with_water_cols
+
+    
