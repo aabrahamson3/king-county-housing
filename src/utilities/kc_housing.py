@@ -127,6 +127,9 @@ def clean_data_intial(df):
     ratio_drop = df_clean.loc[df_clean['footprint_ratio'] > 1.0]
     df_clean.drop(ratio_drop.index, inplace=True, axis=0)
 
+    
+    
+
     return df_clean    
 def recursive_feature_selection(n_features,indep_variables_df, dep_var):
     """
@@ -380,3 +383,17 @@ def base_model():
     check_feature_resid_dist(base_features, df_cleaned, Y)
     check_feature_heteros(base_features, df_cleaned, Y)
     return make_housing_model(base_features, df_cleaned, Y)
+
+def waterfront_ohe(final_model_df):
+    """this is similar to the zipcode OHE function, but for the waterfront location feature, it drops water_0.0 (not waterfront location)"""
+    final_model_df['wfntlocation'] = pd.Categorical(final_model_df['wfntlocation'])
+    df_water = pd.get_dummies(final_model_df['wfntlocation'], prefix = 'water')
+
+    #drop the column for houses with no waterfront location
+    df_water.drop(columns = 'water_0.0', inplace = True) 
+    
+    
+    #join the zip code dataframe to the dataframe with the other predicitive features
+    df_with_water_cols = final_model_df.join(df_water, how = 'inner')
+    df_with_water_cols = df_with_water_cols.drop(['wfntlocation'], axis=1)
+    return df_with_water_cols
