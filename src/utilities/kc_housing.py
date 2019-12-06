@@ -34,8 +34,8 @@ def clean_data_intial(df):
     sale price == 0, and irrelevant columns. It also creates a column, "footprint_ratio"
     based on the size of the house on the lot
     """
-    #We chose a minimum sale vale of 10000 and a maximium sale value of 2 sigma
-    df_clean = df[(df['saleprice']>10000) & (df['saleprice'] <  (2*df['saleprice'].std())+df['saleprice'].mean())]
+    #We chose a minimum sale vale of 100000 and a maximium sale value of 2 sigma
+    df_clean = df[(df['saleprice']>100000) & (df['saleprice'] <  (2*df['saleprice'].std())+df['saleprice'].mean())]
     df_clean = df_clean[df_clean['sqftlot'] <  (2*df_clean['sqftlot'].std())+df_clean['sqftlot'].mean()]
     #These are irrelevant or highly covariant columns
     columns_to_drop = ['documentdate',
@@ -292,7 +292,7 @@ def zip_code_df(df):
     
     #join the zip code dataframe to the dataframe with the other predicitive features
     df_with_zip_cols = dropped_rows.join(df_zip, how = 'inner')
-    
+    df_with_zip_cols = df_with_zip_cols.drop(['zipcode'], axis=1)
     
     return df_with_zip_cols, list_of_zips
 
