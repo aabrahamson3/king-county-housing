@@ -10,6 +10,8 @@ import math
 from sklearn.feature_selection import RFE 
 from sklearn.linear_model import LinearRegression
 import numpy as np
+import warnings
+warnings.filterwarnings(action='once')
 
 def pullsqldata():
     """This function pulls data from three PostGRES tables and returns them into 
@@ -122,6 +124,8 @@ def clean_data_intial(df):
     df_clean.drop(triplex.index, inplace= True, axis=0)
     df_clean['duplex'] = df_clean['nbrlivingunits'] - 1
     df_clean.drop(columns = 'nbrlivingunits', inplace = True)
+    ratio_drop = df_clean.loc[df_clean['footprint_ratio'] > 1.0]
+    df_clean.drop(ratio_drop.index, inplace=True, axis=0)
 
     return df_clean    
 def recursive_feature_selection(n_features,indep_variables_df, dep_var):
@@ -204,8 +208,9 @@ def check_feature_linearity(list_of_features, df, y):
     """
     for column in list_of_features:
         plt.scatter(df[column],y, label=column, alpha = .05)
-        plt.legend()
-        plt.title(column)
+        plt.ylabel('Sale Price')
+        plt.xlabel(column)
+        plt.title('Linearity Check')
         plt.show()
 
 def check_feature_resid_dist(list_of_features, df, y):
@@ -244,3 +249,124 @@ def check_feature_heteros(list_of_features, df, y):
 
         fig = sm.graphics.plot_regress_exog(model, feature, fig=fig)
         plt.show()
+
+def engineer_total_baths(df):
+    df['bath_total_count']=df['bathhalfcount']+df['bath3qtrcount']+df['bathfullcount']
+    df.drop(columns = ['bathhalfcount','bath3qtrcount','bathfullcount'], inplace = True)
+    return df
+
+def engineer_age(df):
+    df['age']=2019 - df['yrbuilt']
+    df.drop(columns = ['yrbuilt'], inplace = True)
+    return df
+
+def engineer_total_porch_space(df):
+    df['porch_sqft_total']=df['sqftopenporch']+df['sqftenclosedporch']
+    df.drop(columns = ['sqftopenporch','sqftenclosedporch'], inplace = True)
+    return df
+
+def zip_code_df(df):
+    """
+    This function produces a tuple with tuple[0] as a df with the one hot encoded zip code features and tuple[1] as 
+    the list of zip code column names. 
+    
+    The df input should be the dataframe that is output by the "clean_data_initial" function (not a dataframe that 
+    the "saleprice" column has been removed from.. this is because we drop rows that do not have a zipcode so we need to 
+    keep the shape of the dependent and independent variable dataframes equal). 
+    
+    """
+    #drop the sales that do not include a zip code. We use '98' here to find king county specific zip codes and 
+    #we select only the first 5 digits of the zip code because some sales' zip codes have an extraneious 4 digits
+    dropped_rows = df[df['zipcode'].str.contains ('98')]
+    dropped_rows['zipcode'] = dropped_rows['zipcode'].map(lambda x: x[0:5])
+
+    #use pd.Categorical and pd.get_dummies methods to one hot encode the zip codes
+    dropped_rows['zipcode'] = pd.Categorical(dropped_rows['zipcode'])
+    df_zip = pd.get_dummies(dropped_rows['zipcode'], prefix = 'zip')
+    
+    #drop one column from the zip code columns to address the inherent multicoliniearity
+    df_zip.drop(columns = 'zip_98000', inplace = True) 
+    
+    #get a list of zipcode column names to include in model
+    list_of_zips = df_zip.columns
+    
+    #join the zip code dataframe to the dataframe with the other predicitive features
+    df_with_zip_cols = dropped_rows.join(df_zip, how = 'inner')
+    
+    
+    return df_with_zip_cols, list_of_zips
+
+def make_zipcode_model(df_clean, list_of_baseline_features):
+    #call zip_code_df function to produce zip code df and list of zipcodes
+    zip_tuple = zip_code_df(df_clean)
+
+    #add on total bath colum using previously used function
+    df = engineer_total_baths(zip_tuple[0])
+    
+    #add on list of other baseline features to the zip code list to put into model
+    list_of_features = list(zip_tuple[1])
+    list_of_features.extend(list_of_baseline_features)
+    
+    #produce the model
+    
+    return make_housing_model(list_of_features, df, df['saleprice'])
+
+def check_zip_code_res_normality(df):
+    zip_tuple = zip_code_df(df)
+    zip_list = list(zip_tuple[1])
+    zip_list.append('saleprice')
+    zip_res = zip_tuple[0][zip_list]
+    
+    lookup_dict = {}
+    for col in zip_res.columns:
+        
+        try:
+            index = int(col[-3:])
+            search_string = col[-3:]
+            amount = int(zip_res[zip_res[col]== True]['saleprice'].mean())
+            span = float(zip_res[zip_res[col]== True]['saleprice'].std())
+            lookup_dict[col] = (amount, span)
+        except:
+            continue
+
+
+
+    error_list = []       
+    for col in zip_res.columns:
+        try:
+            df_filtered = zip_res[zip_res[col]== True]
+            amount = df_filtered['saleprice'].mean()
+            span = float(df_filtered['saleprice'].std())
+            df_filtered['sigma_difference'] = (df_filtered['saleprice'] - amount)/span
+            a = list(df_filtered['sigma_difference'])
+            error_list.extend(a)
+
+
+        except:
+            continue  
+            
+     
+    info = list(filter(lambda x: np.abs(x)> 0, error_list))
+    
+    fig, ax = plt.subplots(1, 2, sharex=False, sharey=False)
+    fig.set_size_inches(15,5)
+    
+    ax[0].set_title('Residuals')
+    ax[0].set_xlabel('Standard Deviation')
+    ax[0].set_ylabel('Probability')
+     
+    ax[1].set_title('Heteroscedasticity')
+    
+    ax[1].set_ylabel('Error')                 
+    
+    fig.suptitle('Zip Code', fontsize=16)
+
+    
+    x = list(range(len(lookup_dict.values())))
+    y = [0]*len(x)
+    yerr = [x[1] for x in lookup_dict.values()]
+
+    plt.errorbar(x, y, yerr=yerr, fmt='o')
+    sns.distplot(info, ax = ax[0])
+    return plt.show()
+
