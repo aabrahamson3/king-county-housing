@@ -37,6 +37,7 @@ def clean_data_intial(df):
     #We chose a minimum sale vale of 100000 and a maximium sale value of 2 sigma
     df_clean = df[(df['saleprice']>100000) & (df['saleprice'] <  (2*df['saleprice'].std())+df['saleprice'].mean())]
     df_clean = df_clean[df_clean['sqftlot'] <  (2*df_clean['sqftlot'].std())+df_clean['sqftlot'].mean()]
+    df_clean = df_clean[df_clean['sqfttotliving']<14000]
     #These are irrelevant or highly covariant columns
     columns_to_drop = ['documentdate',
                        'excisetaxnbr',

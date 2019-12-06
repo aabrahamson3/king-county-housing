@@ -59,3 +59,4 @@ https://info.kingcounty.gov/assessor/datadownload/desc/Lookup.doc
 3. run the following terminal command from your maind repo directory:
 sh setup.sh 
 
+
