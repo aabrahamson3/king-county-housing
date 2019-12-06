@@ -370,3 +370,13 @@ def check_zip_code_res_normality(df):
     sns.distplot(info, ax = ax[0])
     return plt.show()
 
+def base_model():
+    """calling this function will utilize all other defined functions to produce our base model report for King County
+    Housing prices - PLEASE NOTE THIS USES A SQL QUERY, MAY TAKE UP TO ONE MINUTE TO COMPLETE
+    """
+    df_cleaned = clean_data_intial(pullsqldata())
+    base_features = ['sqfttotliving','footprint_ratio','duplex']
+    Y = df_cleaned['saleprice']
+    check_feature_resid_dist(base_features, df_cleaned, Y)
+    check_feature_heteros(base_features, df_cleaned, Y)
+    return make_housing_model(base_features, df_cleaned, Y)
