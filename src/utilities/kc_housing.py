@@ -1,22 +1,22 @@
 ## This file contains functions made for developing our linear regression model of 
 ## King County housing prices
-
-# from sqlalchemy import create_engine
-# import pandas as pd
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# import scipy.stats as stats
-# import statsmodels.api as sm
-# import math
-# from sklearn.feature_selection import RFE 
-# from sklearn.linear_model import LinearRegression
-# import numpy as np
+from sqlalchemy import create_engine
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scipy.stats as stats
+import statsmodels.api as sm
+import math
+from sklearn.feature_selection import RFE 
+from sklearn.linear_model import LinearRegression
+import numpy as np
+import warnings
+warnings.filterwarnings(action='once')
 
 def pullsqldata():
     """This function pulls data from three PostGRES tables and returns them into 
     a Pandas Dataframe in order to continue with our EDA. We are filtering records to
     residential housing in 2018. Note: This can take approx. 1 minute to run. """
-    
     engine = create_engine("postgresql:///kc_housing")
     query = """
                 SELECT *
@@ -32,14 +32,80 @@ def pullsqldata():
 def clean_data_intial(df):
     """ This function cleans the housing data by removing anomoulous outliers, 
     sale price == 0, and irrelevant columns. It also creates a column, "footprint_ratio"
-    based on the size of the house on the lot.
-    We identified features to eliminate based on domain knowledge and the Stepwise Selection Function
+    based on the size of the house on the lot
     """
     #We chose a minimum sale vale of 10000 and a maximium sale value of 2 sigma
     df_clean = df[(df['saleprice']>10000) & (df['saleprice'] <  (2*df['saleprice'].std())+df['saleprice'].mean())]
     df_clean = df_clean[df_clean['sqftlot'] <  (2*df_clean['sqftlot'].std())+df_clean['sqftlot'].mean()]
     #These are irrelevant or highly covariant columns
-    columns_to_drop = ['documentdate','excisetaxnbr','recordingnbr','volume','page','platnbr','plattype','platlot','platblock','sellername','buyername','streetname','streettype','directionsuffix','buildingnumber','major','minor','bldggradevar','sqfthalffloor','sqft2ndfloor','sqftupperfloor','sqftunfinfull','sqftunfinhalf','sqfttotbasement','sqftfinbasement','brickstone','viewutilization','propname','platname','platlot','platblock','range','township','section','quartersection','area','subarea','specarea','specsubarea','levycode','districtname','currentzoning','topography','currentusedesignation','salewarning','wetland','stream','seismichazard','landslidehazard','address','airportnoise','contamination','dnrlease','coalminehazard','criticaldrainage','erosionhazard','landfillbuffer','hundredyrfloodplain','steepslopehazard','speciesofconcern','sensitiveareatract','daylightbasement','fraction','directionprefix', 'proptype','unbuildable', 'bldgnbr', 'pcntcomplete']
+    columns_to_drop = ['documentdate',
+                       'excisetaxnbr',
+                       'recordingnbr',
+                       'volume',
+                       'page',
+                       'platnbr',
+                       'plattype',
+                       'platlot',
+                       'platblock',
+                       'sellername',
+                       'buyername',
+                        'streetname',
+                        'streettype',
+                        'directionsuffix',
+                        'buildingnumber',
+                        'major',
+                        'minor',
+                        'bldggradevar',
+                        'sqfthalffloor',
+                        'sqft2ndfloor',
+                        'sqftupperfloor',
+                        'sqftunfinfull',
+                        'sqftunfinhalf',
+                        'sqfttotbasement',
+                        'sqftfinbasement',
+                        'brickstone',
+                        'viewutilization',
+                        'propname',
+                        'platname',
+                        'platlot',
+                        'platblock',
+                        'range',
+                        'township',
+                        'section',
+                        'quartersection',
+                        'area',
+                        'subarea',
+                        'specarea',
+                        'specsubarea',
+                        'levycode',
+                        'districtname',
+                        'currentzoning',
+                        'topography',
+                        'currentusedesignation',
+                        'salewarning',
+                        'wetland',
+                        'stream',
+                        'seismichazard',
+                        'landslidehazard',
+                        'address',
+                        'airportnoise',
+                        'contamination',
+                        'dnrlease',
+                        'coalminehazard',
+                        'criticaldrainage',
+                        'erosionhazard',
+                        'landfillbuffer',
+                        'hundredyrfloodplain',
+                        'steepslopehazard',
+                        'speciesofconcern',
+                        'sensitiveareatract',
+                        'daylightbasement',
+                        'fraction',
+                        'directionprefix', 
+                        'proptype',
+                        'unbuildable', 
+                        'bldgnbr', 
+                        'pcntcomplete']
     df_clean.drop(columns=columns_to_drop, inplace = True)
     #The columns with Y or N need to be 1 or 0 to model
     df_clean['othernuisances'] = [i.strip() for i in df_clean['othernuisances']]
@@ -50,10 +116,6 @@ def clean_data_intial(df):
     #unfortunatley may not account for detached garages
     df_clean['footprint_ratio']=(df_clean['sqft1stfloor']+df_clean['sqftgarageattached'])/df_clean['sqftlot']
     df_clean.drop(columns = 'sqft1stfloor', inplace = True)
-    # this removes entries that have a ratio higher than 1, meaning the house is large than the lot itself 
-    # (which is impossible)
-    ratio_drop = df_clean.loc[df_clean['footprint_ratio'] > 1.0]
-    df_clean.drop(ratio_drop.index, inplace=True, axis=0)
     
     #nbrliving units is classified data telling us if it is a duplex. We want to remove triplexes and create a duplex 
     #flag column. Also the number of triplexes represent a very small portion of our overall dataset
@@ -62,8 +124,10 @@ def clean_data_intial(df):
     df_clean.drop(triplex.index, inplace= True, axis=0)
     df_clean['duplex'] = df_clean['nbrlivingunits'] - 1
     df_clean.drop(columns = 'nbrlivingunits', inplace = True)
+    ratio_drop = df_clean.loc[df_clean['footprint_ratio'] > 1.0]
+    df_clean.drop(ratio_drop.index, inplace=True, axis=0)
+
     return df_clean    
- 
 def recursive_feature_selection(n_features,indep_variables_df, dep_var):
     """
     n_features = number of features to select
@@ -93,8 +157,7 @@ def stepwise_selection(X, y,
         verbose - whether to print the sequence of inclusions and exclusions
     Returns: list of selected features 
     Always set threshold_in < threshold_out to avoid infinite looping.
-    See https://en.wikipedia.org/wiki/Stepwise_regression for the details. 
-    We sourced this function from an internal Flatiron School document
+    See https://en.wikipedia.org/wiki/Stepwise_regression for the details
     """
     included = list(initial_list)
     while True:
@@ -130,8 +193,8 @@ def stepwise_selection(X, y,
 
 def make_housing_model(list_of_features, df, y):
     """
-    Takes in a list of features, a dataframe, and a target (as df['target]). Returns an Ordinary Least Squares (OLS)
-    linear regression model from the statsmodels python library
+    Takes in a list of features, a dataframe, and a target (as df['target]). Performs an Ordinary Least Squares (OLS)
+    linear regression 
     """
     
     features = df[list_of_features]
@@ -142,20 +205,16 @@ def make_housing_model(list_of_features, df, y):
 
 def check_feature_linearity(list_of_features, df, y):
     """
-    Takes in a list of features, a dataframe, and a target (as df['target]). Creates a scatterplot of the
-    feature vs the target value. To visually check for linearity between the feature and target. 
     """
     for column in list_of_features:
         plt.scatter(df[column],y, label=column, alpha = .05)
-        plt.legend()
-        plt.title(column)
-        plt.ylabel(y.name)
+        plt.ylabel('Sale Price')
         plt.xlabel(column)
+        plt.title('Linearity Check')
         plt.show()
 
 def check_feature_resid_dist(list_of_features, df, y):
     '''
-    Takes in a list of features, a dataframe, and a target (as df['target]).
     Visualizes the residiuals of a linear model in order to check the 
     assumptions. Shows both histogram of residual values and qq plot.
     
@@ -178,7 +237,6 @@ def check_feature_resid_dist(list_of_features, df, y):
 
 def check_feature_heteros(list_of_features, df, y):
     """
-    Takes in a list of features, a dataframe, and a target (as df['target]).
     Visualizes the heteroscedasticity of a linear model in order to check the 
     assumptions.
     """
@@ -192,16 +250,20 @@ def check_feature_heteros(list_of_features, df, y):
         fig = sm.graphics.plot_regress_exog(model, feature, fig=fig)
         plt.show()
 
-def base_model():
-    """calling this function will utilize many other defined functions to produce our base model report for King County
-    Housing prices - this may take 1-2 minutes to complete.
-    """
-    df_cleaned = clean_data_intial(pullsqldata())
-    base_features = ['sqfttotliving','footprint_ratio','duplex']
-    Y = df_cleaned['saleprice']
-    check_feature_resid_dist(base_features, df_cleaned, Y)
-    check_feature_heteros(base_features, df_cleaned, Y)
-    return make_housing_model(base_features, df_cleaned, Y)
+def engineer_total_baths(df):
+    df['bath_total_count']=df['bathhalfcount']+df['bath3qtrcount']+df['bathfullcount']
+    df.drop(columns = ['bathhalfcount','bath3qtrcount','bathfullcount'], inplace = True)
+    return df
+
+def engineer_age(df):
+    df['age']=2019 - df['yrbuilt']
+    df.drop(columns = ['yrbuilt'], inplace = True)
+    return df
+
+def engineer_total_porch_space(df):
+    df['porch_sqft_total']=df['sqftopenporch']+df['sqftenclosedporch']
+    df.drop(columns = ['sqftopenporch','sqftenclosedporch'], inplace = True)
+    return df
 
 def zip_code_df(df):
     """
@@ -248,3 +310,63 @@ def make_zipcode_model(df_clean, list_of_baseline_features):
     #produce the model
     
     return make_housing_model(list_of_features, df, df['saleprice'])
+
+def check_zip_code_res_normality(df):
+    zip_tuple = zip_code_df(df)
+    zip_list = list(zip_tuple[1])
+    zip_list.append('saleprice')
+    zip_res = zip_tuple[0][zip_list]
+    
+    lookup_dict = {}
+    for col in zip_res.columns:
+        
+        try:
+            index = int(col[-3:])
+            search_string = col[-3:]
+            amount = int(zip_res[zip_res[col]== True]['saleprice'].mean())
+            span = float(zip_res[zip_res[col]== True]['saleprice'].std())
+            lookup_dict[col] = (amount, span)
+        except:
+            continue
+
+
+
+    error_list = []       
+    for col in zip_res.columns:
+        try:
+            df_filtered = zip_res[zip_res[col]== True]
+            amount = df_filtered['saleprice'].mean()
+            span = float(df_filtered['saleprice'].std())
+            df_filtered['sigma_difference'] = (df_filtered['saleprice'] - amount)/span
+            a = list(df_filtered['sigma_difference'])
+            error_list.extend(a)
+
+
+        except:
+            continue  
+            
+     
+    info = list(filter(lambda x: np.abs(x)> 0, error_list))
+    
+    fig, ax = plt.subplots(1, 2, sharex=False, sharey=False)
+    fig.set_size_inches(15,5)
+    
+    ax[0].set_title('Residuals')
+    ax[0].set_xlabel('Standard Deviation')
+    ax[0].set_ylabel('Probability')
+     
+    ax[1].set_title('Heteroscedasticity')
+    
+    ax[1].set_ylabel('Error')                 
+    
+    fig.suptitle('Zip Code', fontsize=16)
+
+    
+    x = list(range(len(lookup_dict.values())))
+    y = [0]*len(x)
+    yerr = [x[1] for x in lookup_dict.values()]
+
+    plt.errorbar(x, y, yerr=yerr, fmt='o')
+    sns.distplot(info, ax = ax[0])
+    return plt.show()
+
