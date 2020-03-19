@@ -1,8 +1,7 @@
-<<<<<<< HEAD
 # king-county-housing
 
 Aaron, Brent & Lucas
-December 6th 2018 
+December 6th 2019 
 
 ## Background:
 The factors and variables that affect and influence housing prices are of particular interest to many different groups of people. Often times, most of us non-housing experts have to rely on the opinions of others to determine what the true value of a house is on the open market. Sometimes, however, these evaluations are inaccurate due to new, emerging market trends and/or over generalizations and antiquated assumptions about first-time home buyers that are no longer relevant.
@@ -61,6 +60,3 @@ https://info.kingcounty.gov/assessor/datadownload/desc/Lookup.doc
 sh setup.sh 
 
 
-=======
-# tanzania-water-wells
->>>>>>> de9ee768edc012e15f85f996a14be2fd7fe29e64
